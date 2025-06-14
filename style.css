@@ -1,91 +1,55 @@
-body 
-
-{
-  background-image: url('images/phat-bg.jpg');
-  background-size: 100%;
-  background-attachment: fixed;
-}
-
-{
-  font-family: "Segoe UI", sans-serif;
+body {
   margin: 0;
-  padding: 0;
-  background: #fdf6e3;
-  color: #333;
+  font-family: 'Segoe UI', sans-serif;
+  background: url('../img/nen-phat.jpg') no-repeat center center fixed;
+  background-size: cover;
+  color: #fff;
+  position: relative;
+  overflow-x: hidden;
 }
 
-header {
-  text-align: center;
-  padding: 20px 10px;
-  background: #f5deb3;
-}
-
-.subtitle {
-  font-style: italic;
-  color: #555;
-}
-
-.circle-menu {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 12px;
-  padding: 20px;
-}
-
-.button {
-  background-color: #d4a373;
-  color: white;
-  padding: 12px 20px;
-  border-radius: 30px;
-  text-decoration: none;
-  font-size: 16px;
-  transition: background 0.3s;
-}
-
-.button:hover {
-  background-color: #b88c5b;
-}
-
-.content {
-  max-width: 1200px;
-  margin: auto;
-  padding: 20px;
-}
-
-.video-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-  justify-content: center;
-}
-
-.video-box {
-  flex: 1 1 50%;
-  min-width: 300px;
-}
-
-.video-box iframe {
+.background-overlay {
+  position: fixed;
+  top: 0; left: 0;
   width: 100%;
-  height: auto;
-  border: none;
+  height: 100%;
+  background: rgba(0,0,0,0.4);
+  z-index: 0;
 }
 
-.more-videos {
+.container {
+  position: relative;
+  z-index: 1;
   text-align: center;
-  margin-top: 20px;
+  padding: 80px 20px;
 }
 
-.more-videos h3 a {
+h1 {
+  font-size: 3rem;
+  margin-bottom: 40px;
+  color: #ffe9a7;
+  text-shadow: 1px 1px 8px #000;
+}
+
+.main-menu {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  flex-wrap: wrap;
+}
+
+.main-menu a {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 15px 25px;
+  border-radius: 30px;
+  color: #fff;
+  font-size: 1.2rem;
   text-decoration: none;
-  color: #b36b00;
-  font-weight: bold;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+  transition: all 0.3s ease;
 }
 
-footer {
-  text-align: center;
-  font-size: 14px;
-  padding: 20px;
-  background: #eee;
-  color: #666;
+.main-menu a:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(1.05);
 }
