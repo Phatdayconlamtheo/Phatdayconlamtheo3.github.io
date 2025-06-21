@@ -1,28 +1,152 @@
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Phật Dạy Con Làm Theo</title>
-  <link rel="stylesheet" href="css/style.css" />
+  <meta charset="UTF-8">
+  <title>TTS Pro Creator V10.1 🌕🇻🇳</title>
+  <link rel="stylesheet" href="style.css">
+  <script>
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      document.documentElement.classList.add("dark");
+    }
+  </script>
 </head>
 <body>
+  <h1>TTS Pro Creator V10.1 🌕🇻🇳</h1>
+  <textarea id="text" placeholder="Nhập nội dung..."></textarea>
 
-  <audio autoplay loop>
-    <source src="music/alone-296348.mp3" type="audio/mpeg" />
-  </audio>
-
-  <div class="background-overlay"></div>
-
-  <div class="container">
-    <h1>Phật Dạy Con Làm Theo</h1>
-    <nav class="main-menu">
-      <a href="index.html">Trang Chủ</a>
-      <a href="video.html">Video</a>
-      <a href="baiviet.html">Bài Viết</a>
-      <a href="gioithieu.html">Giới Thiệu</a>
-    </nav>
+  <div class="controls">
+    <label>Giọng đọc:</label>
+    <select id="voiceSelect"></select>
+    <button onclick="autoSelectVNVoice('female')">👩 Chọn giọng nữ</button>
+    <button onclick="autoSelectVNVoice('male')">👨 Chọn giọng nam</button>
+    <label>Tốc độ:</label>
+    <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1">
+    <span id="rateVal">1.0x</span>
   </div>
 
+  <div class="buttons">
+    <button onclick="previewVoice()">🔊 Nghe thử</button>
+    <button onclick="startReading()">▶️ Bắt đầu đọc</button>
+    <button onclick="downloadSRT()">📄 Tải phụ đề .srt</button>
+  </div>
+
+  <div id="sentenceBox"></div>
+  <div id="timeLog"></div>
+  <div id="log"></div>
+
+  <script>
+    let voices = [], currentVoice, currentRate, srtEntries = [], srtIndex = 1;
+
+    function getTimestamp(ms) {
+      const sec = Math.floor(ms / 1000);
+      const h = String(Math.floor(sec / 3600)).padStart(2, '0');
+      const m = String(Math.floor((sec % 3600) / 60)).padStart(2, '0');
+      const s = String(sec % 60).padStart(2, '0');
+      const msStr = String(ms % 1000).padStart(3, '0');
+      return `${h}:${m}:${s},${msStr}`;
+    }
+
+    function populateVoices() {
+      voices = speechSynthesis.getVoices();
+      const select = document.getElementById("voiceSelect");
+      select.innerHTML = "";
+      voices.forEach((v, i) => {
+        const opt = document.createElement("option");
+        opt.value = i;
+        opt.textContent = `${v.name} (${v.lang})`;
+        select.appendChild(opt);
+      });
+    }
+
+    function autoSelectVNVoice(gender) {
+      const vnVoices = voices.filter(v => v.lang.includes("vi"));
+      const keyword = gender === "female" ? "female" : "male";
+      const selected = vnVoices.find(v => v.name.toLowerCase().includes(keyword));
+      if (selected) {
+        document.getElementById("voiceSelect").value = voices.indexOf(selected);
+        document.getElementById("log").innerText = `✅ Đã chọn: ${selected.name}`;
+      } else {
+        alert("Không tìm thấy giọng phù hợp.");
+      }
+    }
+
+    function splitSentences(text) {
+      return text.match(/[^.!?\n]+[.!?\n]?/g) || [];
+    }
+
+    function previewVoice() {
+      const sample = "Đây là bản thử giọng tiếng Việt.";
+      const utter = new SpeechSynthesisUtterance(sample);
+      utter.voice = voices[parseInt(document.getElementById("voiceSelect").value)];
+      utter.rate = parseFloat(document.getElementById("rate").value);
+      speechSynthesis.speak(utter);
+    }
+
+    function startReading() {
+      const text = document.getElementById("text").value;
+      const sentences = splitSentences(text);
+      const container = document.getElementById("sentenceBox");
+      container.innerHTML = "";
+      srtEntries = [];
+      srtIndex = 1;
+      currentVoice = voices[parseInt(document.getElementById("voiceSelect").value)];
+      currentRate = parseFloat(document.getElementById("rate").value);
+
+      sentences.forEach((s, i) => {
+        const span = document.createElement("div");
+        span.textContent = s.trim();
+        span.className = "sentence";
+        container.appendChild(span);
+      });
+
+      function read(index) {
+        if (index >= sentences.length) {
+          document.getElementById("log").innerText = "✅ Đã hoàn tất!";
+          return;
+        }
+        const spans = document.querySelectorAll(".sentence");
+        spans.forEach(s => s.classList.remove("active"));
+        spans[index].classList.add("active");
+
+        const utter = new SpeechSynthesisUtterance(sentences[index]);
+        utter.voice = currentVoice;
+        utter.rate = currentRate;
+        const start = performance.now();
+        utter.onstart = () => {
+          document.getElementById("timeLog").innerText = `🕰️ Đang đọc câu ${index + 1}`;
+        };
+        utter.onend = () => {
+          const end = performance.now();
+          srtEntries.push({
+            index: srtIndex++,
+            start: getTimestamp(start),
+            end: getTimestamp(end),
+            text: sentences[index].trim()
+          });
+          read(index + 1);
+        };
+        speechSynthesis.speak(utter);
+      }
+
+      read(0);
+    }
+
+    function downloadSRT() {
+      const srtText = srtEntries.map(e =>
+        `${e.index}\n${e.start} --> ${e.end}\n${e.text}\n`
+      ).join("\n");
+      const blob = new Blob([srtText], { type: "text/plain" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "subtitles.srt";
+      a.click();
+    }
+
+    window.speechSynthesis.onvoiceschanged = populateVoices;
+    document.getElementById("rate").addEventListener("input", () => {
+      document.getElementById("rateVal").textContent = parseFloat(document.getElementById("rate").value).toFixed(1) + "x";
+    });
+  </script>
 </body>
 </html>
