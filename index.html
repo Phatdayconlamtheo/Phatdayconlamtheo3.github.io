@@ -3,7 +3,7 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <title>TTS Pro Creator V10.1 🌕🇻🇳</title>
+  <title>TTS Pro Creator V10.0 🌕🇻🇳</title>
   <link rel="stylesheet" href="style.css">
   <script>
     if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
@@ -12,7 +12,7 @@
   </script>
 </head>
 <body>
-  <h1>TTS Pro Creator V10.1 🌕🇻🇳</h1>
+  <h1>TTS Pro Creator V10.0 🌕🇻🇳</h1>
   <textarea id="text" placeholder="Nhập nội dung..."></textarea>
 
   <div class="controls">
@@ -25,18 +25,24 @@
     <span id="rateVal">1.0x</span>
   </div>
 
-  <div class="buttons">
-    <button onclick="previewVoice()">🔊 Nghe thử</button>
-    <button onclick="startReading()">▶️ Bắt đầu đọc</button>
-    <button onclick="downloadSRT()">📄 Tải phụ đề .srt</button>
+  <div class="music">
+    <label>🎵 Nhạc nền: </label>
+    <input type="file" id="bgMusic" accept="audio/*" />
   </div>
 
-  <div id="sentenceBox"></div>
-  <div id="timeLog"></div>
+  <div class="buttons">
+    <button onclick="startWithMusic()">▶️ Đọc + Nhạc nền + Phụ đề</button>
+    <button onclick="downloadSRT()">📄 Tải phụ đề .srt</button>
+    <button onclick="exportZIP()">📦 Xuất Project ZIP</button>
+  </div>
+
   <div id="log"></div>
 
   <script>
-    let voices = [], currentVoice, currentRate, srtEntries = [], srtIndex = 1;
+    let voices = [];
+    let srtEntries = [];
+    let srtIndex = 1;
+    let currentVoice, currentRate;
 
     function getTimestamp(ms) {
       const sec = Math.floor(ms / 1000);
@@ -49,87 +55,91 @@
 
     function populateVoices() {
       voices = speechSynthesis.getVoices();
-      const select = document.getElementById("voiceSelect");
-      select.innerHTML = "";
+      const voiceSelect = document.getElementById("voiceSelect");
+      voiceSelect.innerHTML = "";
       voices.forEach((v, i) => {
-        const opt = document.createElement("option");
-        opt.value = i;
-        opt.textContent = `${v.name} (${v.lang})`;
-        select.appendChild(opt);
+        const option = document.createElement("option");
+        option.value = i;
+        option.textContent = `${v.name} (${v.lang})`;
+        voiceSelect.appendChild(option);
       });
     }
 
     function autoSelectVNVoice(gender) {
       const vnVoices = voices.filter(v => v.lang.includes("vi"));
-      const keyword = gender === "female" ? "female" : "male";
-      const selected = vnVoices.find(v => v.name.toLowerCase().includes(keyword));
-      if (selected) {
-        document.getElementById("voiceSelect").value = voices.indexOf(selected);
-        document.getElementById("log").innerText = `✅ Đã chọn: ${selected.name}`;
+      const femaleKeywords = ["female", "nữ", "Google Tiếng Việt"];
+      const maleKeywords = ["male", "nam"];
+      let selected = null;
+
+      if (gender === "female") {
+        selected = vnVoices.find(v => femaleKeywords.some(k => v.name.toLowerCase().includes(k.toLowerCase())));
       } else {
-        alert("Không tìm thấy giọng phù hợp.");
+        selected = vnVoices.find(v => maleKeywords.some(k => v.name.toLowerCase().includes(k.toLowerCase())));
+      }
+
+      const voiceSelect = document.getElementById("voiceSelect");
+      if (selected) {
+        const index = voices.indexOf(selected);
+        voiceSelect.selectedIndex = index;
+        document.getElementById("log").innerText = "✅ Đã chọn giọng tiếng Việt: " + selected.name;
+      } else {
+        alert("Không tìm thấy giọng " + gender + " tiếng Việt.");
       }
     }
+
+    document.getElementById("rate").addEventListener("input", () => {
+      document.getElementById("rateVal").textContent =
+        parseFloat(document.getElementById("rate").value).toFixed(1) + "x";
+    });
 
     function splitSentences(text) {
       return text.match(/[^.!?\n]+[.!?\n]?/g) || [];
     }
 
-    function previewVoice() {
-      const sample = "Đây là bản thử giọng tiếng Việt.";
-      const utter = new SpeechSynthesisUtterance(sample);
-      utter.voice = voices[parseInt(document.getElementById("voiceSelect").value)];
-      utter.rate = parseFloat(document.getElementById("rate").value);
+    function speakWithMusic(sentence, index, sentences) {
+      const utter = new SpeechSynthesisUtterance(sentence);
+      utter.voice = currentVoice;
+      utter.rate = currentRate;
+      const start = performance.now();
+      utter.onstart = () => { window.srtStartTime = start; };
+      utter.onend = () => {
+        const end = performance.now();
+        srtEntries.push({
+          index: srtIndex++,
+          start: getTimestamp(window.srtStartTime),
+          end: getTimestamp(end),
+          text: sentence.trim()
+        });
+        if (index + 1 < sentences.length) {
+          speakWithMusic(sentences[index + 1], index + 1, sentences);
+        } else {
+          document.getElementById("log").innerText = "✅ Hoàn tất đọc và tạo phụ đề.";
+        }
+      };
       speechSynthesis.speak(utter);
     }
 
-    function startReading() {
+    function startWithMusic() {
       const text = document.getElementById("text").value;
-      const sentences = splitSentences(text);
-      const container = document.getElementById("sentenceBox");
-      container.innerHTML = "";
-      srtEntries = [];
-      srtIndex = 1;
-      currentVoice = voices[parseInt(document.getElementById("voiceSelect").value)];
-      currentRate = parseFloat(document.getElementById("rate").value);
-
-      sentences.forEach((s, i) => {
-        const span = document.createElement("div");
-        span.textContent = s.trim();
-        span.className = "sentence";
-        container.appendChild(span);
-      });
-
-      function read(index) {
-        if (index >= sentences.length) {
-          document.getElementById("log").innerText = "✅ Đã hoàn tất!";
-          return;
-        }
-        const spans = document.querySelectorAll(".sentence");
-        spans.forEach(s => s.classList.remove("active"));
-        spans[index].classList.add("active");
-
-        const utter = new SpeechSynthesisUtterance(sentences[index]);
-        utter.voice = currentVoice;
-        utter.rate = currentRate;
-        const start = performance.now();
-        utter.onstart = () => {
-          document.getElementById("timeLog").innerText = `🕰️ Đang đọc câu ${index + 1}`;
-        };
-        utter.onend = () => {
-          const end = performance.now();
-          srtEntries.push({
-            index: srtIndex++,
-            start: getTimestamp(start),
-            end: getTimestamp(end),
-            text: sentences[index].trim()
-          });
-          read(index + 1);
-        };
-        speechSynthesis.speak(utter);
+      const file = document.getElementById("bgMusic").files[0];
+      if (!text.trim()) return;
+      if (!file) {
+        alert("Vui lòng chọn nhạc nền.");
+        return;
       }
 
-      read(0);
+      const audioURL = URL.createObjectURL(file);
+      const bgAudio = new Audio(audioURL);
+      bgAudio.volume = 0.3;
+      bgAudio.play();
+
+      const sentences = splitSentences(text);
+      srtEntries = [];
+      srtIndex = 1;
+      const voiceIndex = parseInt(document.getElementById("voiceSelect").value) || 0;
+      currentVoice = speechSynthesis.getVoices()[voiceIndex] || speechSynthesis.getVoices()[0];
+      currentRate = parseFloat(document.getElementById("rate").value) || 1.0;
+      speakWithMusic(sentences[0], 0, sentences);
     }
 
     function downloadSRT() {
@@ -137,16 +147,31 @@
         `${e.index}\n${e.start} --> ${e.end}\n${e.text}\n`
       ).join("\n");
       const blob = new Blob([srtText], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
+      a.href = url;
       a.download = "subtitles.srt";
       a.click();
     }
 
+    function exportZIP() {
+      const text = document.getElementById("text").value;
+      const srtText = srtEntries.map(e =>
+        `${e.index}\n${e.start} --> ${e.end}\n${e.text}\n`
+      ).join("\n");
+      const zip = new JSZip();
+      zip.file("script.txt", text);
+      zip.file("subtitles.srt", srtText);
+      zip.generateAsync({type:"blob"}).then(content => {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(content);
+        a.download = "TTS_Project_V10.0.zip";
+        a.click();
+      });
+    }
+
     window.speechSynthesis.onvoiceschanged = populateVoices;
-    document.getElementById("rate").addEventListener("input", () => {
-      document.getElementById("rateVal").textContent = parseFloat(document.getElementById("rate").value).toFixed(1) + "x";
-    });
   </script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 </body>
 </html>
